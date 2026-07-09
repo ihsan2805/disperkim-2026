@@ -208,8 +208,8 @@
     </div>
 
     <div class="footer-note">
-      <b>Mode penyimpanan: <span id="storage-mode-label">memeriksa…</span></b><br>
-      Ini basis data prototipe, bukan GitHub. Dipakai untuk menguji alur kerja sebelum jalur produksi dibangun. Jangan gunakan untuk data yang sensitif.
+      <b>Riwayat di panel ini: <span id="storage-mode-label">memeriksa…</span></b><br>
+      Data yang sudah terkirim tersimpan resmi di <a href="#" id="drive-folder-link" target="_blank" style="color:var(--ink);">folder Google Drive tim</a>. Panel riwayat di aplikasi ini hanya menampilkan pengiriman dari perangkat yang sedang dipakai, bukan gabungan semua surveyor.
     </div>
   </div>
   <div id="map">
@@ -380,9 +380,11 @@ function updateStorageBadge(){
   const el = document.getElementById('storage-mode-label');
   if (!el) return;
   el.textContent = storageMode === 'shared'
-    ? 'Basis data bersama (surveyor lain & studio melihat data yang sama)'
-    : 'Lokal di perangkat ini saja (belum tersinkron ke tim lain)';
+    ? 'Bersama (pratinjau Claude)'
+    : 'Perangkat ini saja';
 }
+const driveFolderLinkEl = document.getElementById('drive-folder-link');
+if (driveFolderLinkEl && DRIVE_FOLDER_VIEW_URL) driveFolderLinkEl.href = DRIVE_FOLDER_VIEW_URL;
 
 /* =================== UPLOAD KE GOOGLE DRIVE (via Apps Script Web App) =================== */
 /* Isi dua nilai ini setelah deploy Apps Script (lihat panduan percakapan).
@@ -390,6 +392,7 @@ function updateStorageBadge(){
    alur penyimpanan utama (dbSet) sama sekali. */
 const DRIVE_UPLOAD_URL = 'https://script.google.com/macros/s/AKfycbwg2iBHBYtF28pnOLzLd_UwOaEOpfg8dvxWMi2r7Q34HmCSrLO26sIPFZFVqMDV9mE3/exec';
 const DRIVE_UPLOAD_SECRET = 'perumahan2026';
+const DRIVE_FOLDER_VIEW_URL = 'https://drive.google.com/drive/folders/1G1Rm0PKmoJkK37-KLBFJnoT9sSLz5zCq';
 function uploadToDrive(feature){
   if (!DRIVE_UPLOAD_URL) return;
   fetch(DRIVE_UPLOAD_URL, {
@@ -402,6 +405,7 @@ function uploadToDrive(feature){
 
 /* =================== STATE =================== */
 let activeLayer = null;
+let isDrawing = false;
 let formData = {};
 const savedLayers = {}; // id -> leaflet layer, dipakai juga sebagai target snap
 
@@ -466,6 +470,7 @@ els.btnStart.addEventListener('click', () => {
     nama_komplek: els.komplek.value.trim(),
   };
   setStep(2);
+  isDrawing = true;
   map.pm.enableDraw('Polygon', {
     snappable: true,
     snapDistance: 18,
@@ -477,6 +482,7 @@ els.btnStart.addEventListener('click', () => {
 
 els.btnCancel.addEventListener('click', () => {
   map.pm.disableDraw('Polygon');
+  isDrawing = false;
   setStep(1);
 });
 
@@ -489,6 +495,7 @@ document.getElementById('btn-undo-vertex').addEventListener('click', () => {
 });
 
 map.on('pm:create', (e) => {
+  isDrawing = false;
   activeLayer = e.layer;
   activeLayer.pm.enable({ snappable: true, snapDistance: 18 });
   updateSummary();
@@ -670,6 +677,13 @@ if (navigator.geolocation) {
 }
 document.getElementById('btn-locate').addEventListener('click', () => {
   if (!navigator.geolocation) return;
+  if (isDrawing) {
+    // Sesi menggambar yang belum selesai dibatalkan dulu, supaya titik lama
+    // di posisi sebelumnya tidak ikut menempel pada poligon setelah pindah lokasi.
+    map.pm.disableDraw('Polygon');
+    isDrawing = false;
+    setStep(1);
+  }
   navigator.geolocation.getCurrentPosition(pos => {
     map.setView([pos.coords.latitude, pos.coords.longitude], 19);
   }, () => alert('Tidak bisa mengambil lokasi saat ini.'), { enableHighAccuracy: true });
