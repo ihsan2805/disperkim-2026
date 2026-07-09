@@ -555,6 +555,7 @@ els.btnSubmit.addEventListener('click', async () => {
     activeLayer = null;
 
     prependHistory(feature.properties);
+    uploadToDrive(feature);
 
     // reset form untuk komplek berikutnya
     [els.kelompok, els.kecamatan, els.kelurahan, els.komplek].forEach(f => { f.value = ''; f.classList.remove('invalid'); });
