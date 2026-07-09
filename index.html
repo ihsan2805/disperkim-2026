@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no">
+<title>Digitasi Lapangan — Batas Perumahan</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.css" />
+<link rel="stylesheet" href="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.14.2/dist/leaflet-geoman.css" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;700;800&family=Public+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#eef0e1; --panel:#f6f7ee; --paper-deep:#e2e5cf; --panel-3:#d7dac2;
+    --line:rgba(30,36,23,0.16); --line-strong:rgba(30,36,23,0.34);
+    --ink:#1e2417; --ink-dim:#5c6350;
+    --signal:#b3392a; --signal-deep:#8a2c1f; --ok:#3c6b3a; --danger:#7a2318;
+    --f-display:'Big Shoulders Display',sans-serif; --f-body:'Public Sans',sans-serif; --f-mono:'Space Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;font-family:var(--f-body);background:var(--paper);color:var(--ink);}
+  #app{display:flex;height:100vh;width:100vw;}
+  #sidebar{width:368px;min-width:368px;background:var(--panel);border-right:2px solid var(--ink);display:flex;flex-direction:column;overflow-y:auto;}
+
+  .titleblock{border-bottom:3px solid var(--ink);background:var(--ink);color:var(--paper);}
+  .titleblock-top{padding:16px 18px 14px;position:relative;}
+  .titleblock-top .eyebrow{font-family:var(--f-mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:#a9ad93;}
+  .titleblock-top .judul{font-family:var(--f-display);font-size:22px;font-weight:800;text-transform:uppercase;letter-spacing:.02em;margin-top:2px;line-height:1.05;}
+  .titleblock-top .sub{font-size:11px;color:#c7cab3;margin-top:4px;font-family:var(--f-body);}
+
+  .steps{display:flex;border-bottom:2px solid var(--ink);background:repeating-linear-gradient(90deg,var(--panel) 0,var(--panel) 38px,var(--line) 38px,var(--line) 39px);}
+  .step{flex:1;padding:10px 6px 8px;text-align:center;font-family:var(--f-mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim);border-right:2px solid var(--ink);position:relative;}
+  .step:last-child{border-right:none;}
+  .step .n{display:block;font-family:var(--f-display);font-size:20px;font-weight:800;color:var(--ink-dim);line-height:1.1;}
+  .step.active{background:var(--signal);color:#fff;}
+  .step.active .n{color:#fff;}
+  .step.done{background:var(--paper-deep);color:var(--ok);}
+  .step.done .n{color:var(--ok);}
+  .step.done::after{content:"✓";position:absolute;top:4px;right:6px;font-size:9px;color:var(--ok);}
+
+  .section{padding:15px 18px;border-bottom:1px solid var(--line);}
+  .section h2{font-family:var(--f-mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-dim);margin:0 0 11px;display:flex;align-items:center;gap:7px;}
+  .section h2::before{content:"";width:12px;height:2px;background:var(--ink);}
+
+  .field{margin-bottom:11px;}
+  .field:last-child{margin-bottom:0;}
+  .field label{display:block;font-size:10.5px;color:var(--ink-dim);margin-bottom:5px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;font-family:var(--f-mono);}
+  .field input,.field select{width:100%;background:var(--panel);border:1.5px solid var(--line-strong);color:var(--ink);padding:9px 10px;border-radius:2px;font-size:13px;font-family:var(--f-body);}
+  .field input:focus,.field select:focus{outline:2px solid var(--signal);outline-offset:-1px;}
+  .field input.invalid,.field select.invalid{border-color:var(--danger);background:#f6e4e0;}
+  .field select:disabled{opacity:.55;cursor:not-allowed;}
+
+  .btn{width:100%;display:flex;align-items:center;justify-content:center;gap:8px;border:1.5px solid var(--ink);padding:11px;border-radius:2px;font-size:12px;font-weight:700;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.05em;cursor:pointer;margin-bottom:8px;transition:.1s;}
+  .btn:last-child{margin-bottom:0;}
+  .btn-primary{background:var(--signal);color:#fff;border-color:var(--signal);}
+  .btn-primary:hover{background:var(--signal-deep);border-color:var(--signal-deep);}
+  .btn-primary:disabled{background:var(--panel-3);color:var(--ink-dim);border-color:var(--line-strong);cursor:not-allowed;}
+  .btn-secondary{background:var(--panel);color:var(--ink);border-color:var(--line-strong);}
+  .btn-secondary:hover{border-color:var(--ink);}
+  .btn-danger{background:transparent;color:var(--danger);border-color:var(--danger);}
+  .btn-danger:hover{background:#f6e4e0;}
+  .btn-sm{padding:6px 9px;font-size:10px;width:auto;margin:0;}
+
+  .hint{font-size:10.5px;color:var(--ink-dim);line-height:1.5;margin-top:6px;}
+  .badge{display:inline-block;font-family:var(--f-mono);font-size:9.5px;padding:2px 7px;border-radius:2px;background:var(--panel);color:var(--ink-dim);border:1px solid var(--line-strong);}
+  .badge.on{background:#e2ecdf;color:var(--ok);border-color:var(--ok);}
+
+  .summary-box{background:var(--panel);border:1.5px solid var(--ink);border-radius:2px;padding:11px;}
+  .summary-row{display:flex;justify-content:space-between;font-size:12px;padding:4px 0;border-bottom:1px dashed var(--line-strong);}
+  .summary-row:last-child{border-bottom:none;}
+  .summary-row b{font-family:var(--f-mono);}
+
+  .history-item{background:var(--panel);border:1px solid var(--line-strong);border-left:3px solid var(--ink);border-radius:0;padding:9px 10px;margin-bottom:8px;font-size:11.5px;}
+  .history-item:last-child{margin-bottom:0;}
+  .history-item .name{font-weight:700;font-family:var(--f-display);font-size:14px;text-transform:uppercase;letter-spacing:.01em;margin-bottom:3px;}
+  .history-item .meta{color:var(--ink-dim);font-family:var(--f-mono);font-size:10px;line-height:1.6;}
+  .history-item .row-actions{margin-top:7px;display:flex;gap:6px;}
+  .history-empty{font-size:11.5px;color:var(--ink-dim);text-align:center;padding:14px 0;font-family:var(--f-mono);}
+
+  .gps-readout{font-family:var(--f-mono);font-size:10.5px;color:var(--ink);background:var(--panel);border:1px solid var(--line-strong);border-radius:2px;padding:7px 9px;line-height:1.6;}
+
+  .footer-note{margin-top:auto;padding:13px 18px;font-size:9.5px;color:var(--ink-dim);border-top:2px solid var(--ink);line-height:1.6;font-family:var(--f-mono);background:var(--paper-deep);}
+  .footer-note b{color:var(--ink);}
+
+  #map{flex:1;height:100%;}
+  .leaflet-popup-content-wrapper{border-radius:2px;font-family:var(--f-body);border:1.5px solid var(--ink);box-shadow:none;}
+  .leaflet-popup-tip{display:none;}
+  .popup-title{font-family:var(--f-display);font-weight:800;font-size:15px;text-transform:uppercase;margin-bottom:6px;padding-bottom:6px;border-bottom:1px dashed var(--line-strong);}
+  .popup-row{font-size:11px;color:var(--ink-dim);margin-bottom:2px;font-family:var(--f-mono);}
+
+  .banner{position:absolute;top:14px;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 16px;border-radius:2px;font-size:11.5px;font-weight:700;font-family:var(--f-mono);text-transform:uppercase;letter-spacing:.04em;z-index:1000;border:1.5px solid var(--ink);display:none;align-items:center;gap:8px;}
+  .banner.show{display:flex;}
+  .banner .dot{width:7px;height:7px;border-radius:50%;background:var(--signal);animation:pulse 1.2s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.25;}}
+
+  .locate-btn{position:absolute;bottom:26px;right:12px;z-index:1000;background:var(--panel);border:1.5px solid var(--ink);width:40px;height:40px;border-radius:2px;display:flex;align-items:center;justify-content:center;cursor:pointer;}
+  .locate-btn:hover{background:var(--signal);}
+  .locate-btn:hover svg{stroke:#fff;}
+
+  /* Marka fidusial di sudut peta, meniru tanda fidusial pada foto udara/ortofoto */
+  .fiducial{position:absolute;width:22px;height:22px;z-index:900;pointer-events:none;opacity:.55;}
+  .fiducial::before,.fiducial::after{content:"";position:absolute;background:var(--ink);}
+  .fiducial::before{left:50%;top:0;width:1.5px;height:100%;transform:translateX(-50%);}
+  .fiducial::after{top:50%;left:0;height:1.5px;width:100%;transform:translateY(-50%);}
+  .fiducial.tl{top:10px;left:10px;} .fiducial.tr{top:10px;right:10px;}
+  .fiducial.bl{bottom:10px;left:10px;} .fiducial.br{bottom:10px;right:10px;}
+
+  @media (max-width:760px){
+    #app{flex-direction:column;}
+    #sidebar{width:100%;min-width:0;max-height:52vh;order:2;}
+    #map{flex:1;order:1;min-height:40vh;}
+  }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="sidebar">
+    <div class="titleblock">
+      <div class="titleblock-top">
+        <div class="eyebrow">Prototipe · Tim Surveyor</div>
+        <div class="judul">Digitasi Batas Perumahan</div>
+        <div class="sub">Isi data komplek, lalu gambar batasnya di peta</div>
+      </div>
+    </div>
+
+    <div class="steps">
+      <div class="step" id="step-indicator-1"><span class="n">1</span>Data</div>
+      <div class="step" id="step-indicator-2"><span class="n">2</span>Gambar</div>
+      <div class="step" id="step-indicator-3"><span class="n">3</span>Kirim</div>
+    </div>
+
+    <!-- ================= STEP 1: FORM DATA KOMPLEK ================= -->
+    <div class="section" id="panel-form">
+      <h2>Data Komplek Perumahan</h2>
+      <div class="field">
+        <label>Nama Kelompok</label>
+        <select id="f-kelompok">
+          <option value="">— Pilih kelompok —</option>
+          <option>Kelompok 1</option>
+          <option>Kelompok 2</option>
+          <option>Kelompok 3</option>
+          <option>Kelompok 4</option>
+          <option>Kelompok 5</option>
+          <option>Kelompok 6</option>
+          <option>Kelompok 7</option>
+          <option>Kelompok 8</option>
+          <option>Kelompok 9</option>
+          <option>Kelompok 10</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kecamatan</label>
+        <select id="f-kecamatan">
+          <option value="">— Pilih kecamatan —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Kelurahan</label>
+        <select id="f-kelurahan" disabled>
+          <option value="">— Pilih kecamatan dahulu —</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Nama Komplek Perumahan</label>
+        <input type="text" id="f-komplek" placeholder="cth. Perumahan Griya Asri">
+      </div>
+      <button class="btn btn-primary" id="btn-start-draw" disabled style="margin-top:12px;">Mulai Deliniasi Batas</button>
+      <div class="hint">Semua kolom wajib diisi sebelum menggambar. Data ini akan melekat pada poligon yang dibuat.</div>
+    </div>
+
+    <!-- ================= STEP 2: KONTROL GAMBAR ================= -->
+    <div class="section" id="panel-draw" style="display:none;">
+      <h2>Menggambar Batas</h2>
+      <p class="hint" style="margin-top:0;">Klik di peta untuk menambah titik. Klik titik pertama lagi atau tekan dua kali untuk menutup poligon. Tekan <b>Backspace</b> untuk membatalkan titik terakhir saat menggambar.</p>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:10px 0;">
+        <span style="font-size:12px;color:var(--ink-dim);">Snap ke titik/garis terdekat</span>
+        <span class="badge on" id="snap-badge">AKTIF</span>
+      </div>
+      <button class="btn btn-secondary" id="btn-undo-vertex">Urungkan Titik Terakhir</button>
+      <button class="btn btn-danger" id="btn-cancel-draw">Batalkan Gambar</button>
+    </div>
+
+    <!-- ================= STEP 3: RINGKASAN & KIRIM ================= -->
+    <div class="section" id="panel-summary" style="display:none;">
+      <h2>Ringkasan Poligon</h2>
+      <div class="summary-box">
+        <div class="summary-row"><span>Komplek</span><b id="sum-komplek">—</b></div>
+        <div class="summary-row"><span>Luas</span><b id="sum-luas">—</b></div>
+        <div class="summary-row"><span>Jumlah titik</span><b id="sum-titik">—</b></div>
+      </div>
+      <p class="hint">Bentuk masih bisa ditarik/diedit sebelum dikirim. Geser titik pada poligon jika perlu penyesuaian.</p>
+      <button class="btn btn-primary" id="btn-submit" style="margin-top:10px;">Simpan &amp; Kirim</button>
+      <button class="btn btn-secondary" id="btn-discard">Hapus &amp; Ulangi</button>
+    </div>
+
+    <!-- ================= GPS READOUT ================= -->
+    <div class="section">
+      <h2>Posisi GPS</h2>
+      <div class="gps-readout" id="gps-readout">Menunggu sinyal GPS…</div>
+    </div>
+
+    <!-- ================= RIWAYAT ================= -->
+    <div class="section" style="flex:1;">
+      <h2 style="display:flex;justify-content:space-between;align-items:center;">
+        <span style="display:flex;align-items:center;gap:7px;"><span style="width:12px;height:1px;background:var(--line-strong);display:inline-block;"></span>Riwayat Digitasi</span>
+        <button class="btn btn-secondary btn-sm" id="btn-refresh-history">Muat Ulang</button>
+      </h2>
+      <div id="history-list"><div class="history-empty">Belum ada data. Memuat…</div></div>
+    </div>
+
+    <div class="footer-note">
+      <b>Mode penyimpanan: <span id="storage-mode-label">memeriksa…</span></b><br>
+      Ini basis data prototipe, bukan GitHub. Dipakai untuk menguji alur kerja sebelum jalur produksi dibangun. Jangan gunakan untuk data yang sensitif.
+    </div>
+  </div>
+  <div id="map">
+    <div class="fiducial tl"></div><div class="fiducial tr"></div>
+    <div class="fiducial bl"></div><div class="fiducial br"></div>
+    <div class="banner" id="draw-banner"><span class="dot"></span><span id="draw-banner-text">Gambar batas perumahan di peta</span></div>
+    <div class="locate-btn" id="btn-locate" title="Ke lokasi saya">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1e2417" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.js"></script>
+<script src="https://unpkg.com/@geoman-io/leaflet-geoman-free@2.14.2/dist/leaflet-geoman.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Turf.js/6.5.0/turf.min.js"></script>
+<script src="https://unpkg.com/pmtiles@3/dist/pmtiles.js"></script>
+<script>
+/* =================== PETA DASAR =================== */
+const map = L.map('map', { zoomControl: true }).setView([-6.9175, 107.6191], 14);
+
+const satelit = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 20, attribution: 'Tiles &copy; Esri'
+}).addTo(map);
+const labelOverlay = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', {
+  maxZoom: 20, attribution: ''
+}).addTo(map);
+const osm = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  maxZoom: 19, attribution: '&copy; OpenStreetMap'
+});
+
+/* =================== ORTOFOTO SENDIRI (PMTiles) =================== */
+/* Ganti URL di bawah dengan lokasi file .pmtiles hasil konversi dari MBTiles
+   ATR/BPN atau hasil olahan sendiri (lihat catatan di akhir percakapan).
+   Selama file belum tersedia di URL ini, opsi "Ortofoto (lokal)" di kontrol
+   layer akan muncul tapi lapisannya kosong/gagal muat — tidak akan mematikan
+   peta yang lain. */
+const ORTHO_PMTILES_URL = 'data/ortofoto-bandung.pmtiles';
+let orthoLayer = null;
+try {
+  const orthoSource = new pmtiles.PMTiles(ORTHO_PMTILES_URL);
+  orthoLayer = pmtiles.leafletRasterLayer(orthoSource, { maxZoom: 21, maxNativeZoom: 21 });
+} catch (e) {
+  console.warn('Lapisan ortofoto PMTiles belum bisa disiapkan:', e);
+}
+
+const baseLayers = { 'Satelit (Esri)': satelit, 'Peta Jalan (OSM)': osm };
+if (orthoLayer) baseLayers['Ortofoto (lokal)'] = orthoLayer;
+L.control.layers(baseLayers, { 'Label & Batas': labelOverlay }, { position: 'topright' }).addTo(map);
+L.control.scale({ imperial: false }).addTo(map);
+
+/* =================== GEOMAN: opsi global & snapping =================== */
+map.pm.setGlobalOptions({
+  snappable: true,
+  snapDistance: 18,
+  allowSelfIntersection: false
+});
+
+/* =================== DATA WILAYAH: KECAMATAN & KELURAHAN KOTA BANDUNG =================== */
+/* Sumber: Permendagri No. 137/2017 jo. No. 72/2019 tentang Kode dan Data Wilayah Administrasi Pemerintahan (30 kecamatan, 151 kelurahan) */
+const WILAYAH = {
+  "Andir": ["Campaka","Ciroyom","Dungus Cariang","Garuda","Kebon Jeruk","Maleber"],
+  "Antapani": ["Antapani Kidul","Antapani Kulon","Antapani Tengah","Antapani Wetan"],
+  "Arcamanik": ["Cisaranten Bina Harapan","Cisaranten Endah","Cisaranten Kulon","Sukamiskin"],
+  "Astanaanyar": ["Cibadak","Karang Anyar","Karasak","Nyengseret","Panjunan","Pelindung Hewan"],
+  "Babakan Ciparay": ["Babakan","Babakan Ciparay","Cirangrang","Margahayu Utara","Margasuka","Sukahaji"],
+  "Bandung Kidul": ["Batununggal","Kujangsari","Mengger","Wates"],
+  "Bandung Kulon": ["Caringin","Cibuntu","Cigondewah Kaler","Cigondewah Kidul","Cigondewah Rahayu","Cijerah","Gempol Sari","Warung Muncang"],
+  "Bandung Wetan": ["Cihapit","Citarum","Taman Sari"],
+  "Batununggal": ["Binong","Cibangkong","Gumuruh","Kacapiring","Kebon Gedang","Kebon Waru","Maleer","Samoja"],
+  "Bojongloa Kaler": ["Babakan Asih","Babakan Tarogong","Jamika","Kopo","Suka Asih"],
+  "Bojongloa Kidul": ["Cibaduyut","Cibaduyut Kidul","Cibaduyut Wetan","Kebon Lega","Mekar Wangi","Situsaeur"],
+  "Buahbatu": ["Cijaura","Jati Sari","Margasari","Sekejati"],
+  "Cibeunying Kaler": ["Cigadung","Cihaurgeulis","Neglasari","Sukaluyu"],
+  "Cibeunying Kidul": ["Cicadas","Cikutra","Padasuka","Pasirlayung","Sukamaju","Sukapada"],
+  "Cibiru": ["Cipadung","Cisurupan","Palasari","Pasir Biru"],
+  "Cicendo": ["Arjuna","Husein Sastranegara","Pajajaran","Pamoyanan","Pasirkaliki","Sukaraja"],
+  "Cidadap": ["Ciumbuleuit","Hegarmanah","Ledeng"],
+  "Cinambo": ["Babakan Penghulu","Cisaranten Wetan","Pakemitan","Sukamulya"],
+  "Coblong": ["Cipaganti","Dago","Lebak Gede","Lebak Siliwangi","Sadang Serang","Sekeloa"],
+  "Gedebage": ["Cimencrang","Cisaranten Kidul","Rancabolang","Rancanumpang"],
+  "Kiaracondong": ["Babakan Sari","Babakan Surabaya","Cicaheum","Kebon Jayanti","Kebon Kangkung","Sukapura"],
+  "Lengkong": ["Burangrang","Cijagra","Cikawao","Lingkar Selatan","Malabar","Paledang","Turangga"],
+  "Mandalajati": ["Jatihandap","Karang Pamulang","Pasir Impun","Sindang Jaya"],
+  "Panyileukan": ["Cipadung Kidul","Cipadung Kulon","Cipadung Wetan","Mekar Mulya"],
+  "Rancasari": ["Cipamokolan","Derwati","Manjahlega","Mekar Jaya"],
+  "Regol": ["Ancol","Balong Gede","Ciateul","Cigereleng","Ciseureuh","Pasirluyu","Pungkur"],
+  "Sukajadi": ["Cipedes","Pasteur","Sukabungah","Sukagalih","Sukawarna"],
+  "Sukasari": ["Gegerkalong","Isola","Sarijadi","Sukarasa"],
+  "Sumur Bandung": ["Babakan Ciamis","Braga","Kebon Pisang","Merdeka"],
+  "Ujungberung": ["Cigending","Pasanggrahan","Pasir Endah","Pasir Wangi","Pasirjati"]
+};
+
+const kecSelectEl = document.getElementById('f-kecamatan');
+const kelSelectEl = document.getElementById('f-kelurahan');
+Object.keys(WILAYAH).sort().forEach(kec => {
+  const opt = document.createElement('option');
+  opt.value = kec; opt.textContent = kec;
+  kecSelectEl.appendChild(opt);
+});
+kecSelectEl.addEventListener('change', () => {
+  kelSelectEl.innerHTML = '<option value="">— Pilih kelurahan —</option>';
+  const list = (WILAYAH[kecSelectEl.value] || []).slice().sort();
+  list.forEach(kel => {
+    const opt = document.createElement('option');
+    opt.value = kel; opt.textContent = kel;
+    kelSelectEl.appendChild(opt);
+  });
+  kelSelectEl.disabled = list.length === 0;
+});
+
+/* =================== BASIS DATA =================== */
+/* Coba simpan ke penyimpanan bersama artifact dulu; jika tidak tersedia
+   (mis. file dibuka langsung di luar pratinjau Claude), otomatis jatuh
+   ke localStorage per perangkat supaya tombol kirim tetap berfungsi. */
+let storageMode = null;
+function hasCloudStorage(){
+  return typeof window !== 'undefined' && !!window.storage && typeof window.storage.set === 'function';
+}
+async function dbSet(key, value){
+  if (hasCloudStorage()) {
+    try {
+      const r = await window.storage.set(key, value, true);
+      if (r) { storageMode = 'shared'; updateStorageBadge(); return true; }
+    } catch (e) { /* lanjut ke fallback lokal */ }
+  }
+  try {
+    localStorage.setItem(key, value);
+    storageMode = 'local';
+    updateStorageBadge();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+async function dbGet(key){
+  if (hasCloudStorage()) {
+    try {
+      const r = await window.storage.get(key, true);
+      if (r) return r.value;
+    } catch (e) { /* lanjut ke fallback lokal */ }
+  }
+  return localStorage.getItem(key);
+}
+async function dbList(prefix){
+  if (hasCloudStorage()) {
+    try {
+      const r = await window.storage.list(prefix, true);
+      if (r && r.keys) { storageMode = 'shared'; updateStorageBadge(); return r.keys; }
+    } catch (e) { /* lanjut ke fallback lokal */ }
+  }
+  const keys = [];
+  for (let i = 0; i < localStorage.length; i++) {
+    const k = localStorage.key(i);
+    if (k && k.indexOf(prefix) === 0) keys.push(k);
+  }
+  storageMode = storageMode || 'local';
+  updateStorageBadge();
+  return keys;
+}
+async function dbDelete(key){
+  if (hasCloudStorage()) {
+    try { await window.storage.delete(key, true); return true; } catch (e) { /* lanjut ke fallback lokal */ }
+  }
+  localStorage.removeItem(key);
+  return true;
+}
+function updateStorageBadge(){
+  const el = document.getElementById('storage-mode-label');
+  if (!el) return;
+  el.textContent = storageMode === 'shared'
+    ? 'Basis data bersama (surveyor lain & studio melihat data yang sama)'
+    : 'Lokal di perangkat ini saja (belum tersinkron ke tim lain)';
+}
+
+/* =================== UPLOAD KE GOOGLE DRIVE (via Apps Script Web App) =================== */
+/* Isi dua nilai ini setelah deploy Apps Script (lihat panduan percakapan).
+   Selama DRIVE_UPLOAD_URL kosong, langkah ini dilewati dan tidak memengaruhi
+   alur penyimpanan utama (dbSet) sama sekali. */
+const DRIVE_UPLOAD_URL = '';
+const DRIVE_UPLOAD_SECRET = '';
+function uploadToDrive(feature){
+  if (!DRIVE_UPLOAD_URL) return;
+  fetch(DRIVE_UPLOAD_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'text/plain' },
+    body: JSON.stringify({ secret: DRIVE_UPLOAD_SECRET, feature }),
+  }).catch(() => { /* upload ke Drive bersifat best-effort, tidak menghentikan alur utama */ });
+}
+
+/* =================== STATE =================== */
+let activeLayer = null;
+let formData = {};
+const savedLayers = {}; // id -> leaflet layer, dipakai juga sebagai target snap
+
+/* =================== ELEMEN FORM & STEP INDICATOR =================== */
+const els = {
+  kelompok: document.getElementById('f-kelompok'),
+  kecamatan: document.getElementById('f-kecamatan'),
+  kelurahan: document.getElementById('f-kelurahan'),
+  komplek: document.getElementById('f-komplek'),
+  btnStart: document.getElementById('btn-start-draw'),
+  panelForm: document.getElementById('panel-form'),
+  panelDraw: document.getElementById('panel-draw'),
+  panelSummary: document.getElementById('panel-summary'),
+  btnCancel: document.getElementById('btn-cancel-draw'),
+  btnSubmit: document.getElementById('btn-submit'),
+  btnDiscard: document.getElementById('btn-discard'),
+  sumKomplek: document.getElementById('sum-komplek'),
+  sumLuas: document.getElementById('sum-luas'),
+  sumTitik: document.getElementById('sum-titik'),
+  banner: document.getElementById('draw-banner'),
+  historyList: document.getElementById('history-list'),
+  gpsReadout: document.getElementById('gps-readout'),
+};
+
+function setStep(n){
+  for (let i = 1; i <= 3; i++){
+    const el = document.getElementById('step-indicator-' + i);
+    el.classList.remove('active', 'done');
+    if (i < n) el.classList.add('done');
+    if (i === n) el.classList.add('active');
+  }
+  els.panelForm.style.display = n === 1 ? 'block' : 'none';
+  els.panelDraw.style.display = n === 2 ? 'block' : 'none';
+  els.panelSummary.style.display = n === 3 ? 'block' : 'none';
+  els.banner.classList.toggle('show', n === 2);
+}
+setStep(1);
+
+function validateForm(){
+  const fields = [els.kelompok, els.kecamatan, els.kelurahan, els.komplek];
+  let ok = true;
+  fields.forEach(f => {
+    const filled = f.value.trim().length > 0;
+    f.classList.toggle('invalid', !filled);
+    if (!filled) ok = false;
+  });
+  els.btnStart.disabled = !ok;
+  return ok;
+}
+[els.kelompok, els.kecamatan, els.kelurahan, els.komplek].forEach(f => {
+  f.addEventListener('input', validateForm);
+  f.addEventListener('change', validateForm);
+});
+
+/* =================== MULAI MENGGAMBAR =================== */
+els.btnStart.addEventListener('click', () => {
+  if (!validateForm()) return;
+  formData = {
+    nama_kelompok: els.kelompok.value.trim(),
+    kecamatan: els.kecamatan.value.trim(),
+    kelurahan: els.kelurahan.value.trim(),
+    nama_komplek: els.komplek.value.trim(),
+  };
+  setStep(2);
+  map.pm.enableDraw('Polygon', {
+    snappable: true,
+    snapDistance: 18,
+    templineStyle: { color: '#b3392a', weight: 2 },
+    hintlineStyle: { color: '#b3392a', dashArray: [6, 6] },
+    pathOptions: { color: '#b3392a', fillColor: '#b3392a', fillOpacity: 0.22, weight: 3, dashArray: '6 4' },
+  });
+});
+
+els.btnCancel.addEventListener('click', () => {
+  map.pm.disableDraw('Polygon');
+  setStep(1);
+});
+
+document.getElementById('btn-undo-vertex').addEventListener('click', () => {
+  try {
+    map.pm.Draw.Polygon._removeLastVertex();
+  } catch (e) {
+    alert('Tidak ada titik yang bisa diurungkan, atau mode gambar belum aktif.');
+  }
+});
+
+map.on('pm:create', (e) => {
+  activeLayer = e.layer;
+  activeLayer.pm.enable({ snappable: true, snapDistance: 18 });
+  updateSummary();
+  activeLayer.on('pm:edit', updateSummary);
+  activeLayer.on('pm:markerdragend', updateSummary);
+  setStep(3);
+});
+
+function polygonAreaM2(layer){
+  try {
+    const gj = layer.toGeoJSON();
+    return turf.area(gj);
+  } catch (err) {
+    return 0;
+  }
+}
+function formatLuas(m2){
+  if (m2 >= 10000) return (m2 / 10000).toFixed(2) + ' ha';
+  return m2.toFixed(0) + ' m\u00B2';
+}
+function updateSummary(){
+  if (!activeLayer) return;
+  const m2 = polygonAreaM2(activeLayer);
+  const vcount = activeLayer.getLatLngs()[0].length;
+  els.sumKomplek.textContent = formData.nama_komplek || '—';
+  els.sumLuas.textContent = formatLuas(m2);
+  els.sumTitik.textContent = vcount;
+}
+
+/* =================== BATALKAN / ULANGI =================== */
+els.btnDiscard.addEventListener('click', () => {
+  if (activeLayer) { map.removeLayer(activeLayer); activeLayer = null; }
+  setStep(1);
+});
+
+/* =================== KIRIM & SIMPAN (basis data prototipe) =================== */
+els.btnSubmit.addEventListener('click', async () => {
+  if (!activeLayer) return;
+  els.btnSubmit.disabled = true;
+  els.btnSubmit.textContent = 'Mengirim…';
+
+  const id = 'PRM-' + Date.now() + '-' + Math.random().toString(36).slice(2, 7);
+  const gj = activeLayer.toGeoJSON();
+  const m2 = polygonAreaM2(activeLayer);
+  const feature = {
+    type: 'Feature',
+    properties: {
+      id,
+      ...formData,
+      area_m2: Math.round(m2),
+      waktu_kirim: new Date().toISOString(),
+    },
+    geometry: gj.geometry,
+  };
+
+  try {
+    const result = await dbSet('perumahan:' + id, JSON.stringify(feature));
+    if (!result) throw new Error('Penyimpanan gagal, coba lagi.');
+    // Ganti gaya poligon draft jadi poligon tersimpan (solid, navy)
+    activeLayer.pm.disable();
+    activeLayer.setStyle({ color: '#1e2417', fillColor: '#1e2417', fillOpacity: 0.28, weight: 2, dashArray: null });
+    activeLayer.bindPopup(popupHtml(feature.properties));
+    savedLayers[id] = activeLayer;
+    activeLayer = null;
+
+    prependHistory(feature.properties);
+
+    // reset form untuk komplek berikutnya
+    [els.kelompok, els.kecamatan, els.kelurahan, els.komplek].forEach(f => { f.value = ''; f.classList.remove('invalid'); });
+    validateForm();
+    setStep(1);
+  } catch (err) {
+    alert('Gagal mengirim data: ' + err.message + '\nBentuk poligon tetap tersimpan di layar, coba tekan Simpan & Kirim lagi.');
+  } finally {
+    els.btnSubmit.disabled = false;
+    els.btnSubmit.textContent = 'Simpan & Kirim';
+  }
+});
+
+function popupHtml(p){
+  return `<div class="popup-title">${escapeHtml(p.nama_komplek)}</div>
+    <div class="popup-row"><b>Kecamatan:</b> ${escapeHtml(p.kecamatan)}</div>
+    <div class="popup-row"><b>Kelurahan:</b> ${escapeHtml(p.kelurahan)}</div>
+    <div class="popup-row"><b>Kelompok:</b> ${escapeHtml(p.nama_kelompok)}</div>
+    <div class="popup-row"><b>Luas:</b> ${formatLuas(p.area_m2)}</div>
+    <div class="popup-row"><b>Waktu:</b> ${new Date(p.waktu_kirim).toLocaleString('id-ID')}</div>`;
+}
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* =================== RIWAYAT: muat dari basis data & render =================== */
+function historyItemHtml(p){
+  return `<div class="history-item" data-id="${p.id}">
+    <div class="name">${escapeHtml(p.nama_komplek)}</div>
+    <div class="meta">${escapeHtml(p.kecamatan)} · ${escapeHtml(p.kelurahan)}<br>
+    ${formatLuas(p.area_m2)} · ${escapeHtml(p.nama_kelompok)}<br>
+    ${new Date(p.waktu_kirim).toLocaleString('id-ID')}</div>
+    <div class="row-actions">
+      <button class="btn btn-secondary btn-sm" onclick="zoomToFeature('${p.id}')">Lihat</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteFeature('${p.id}')">Hapus</button>
+    </div>
+  </div>`;
+}
+function prependHistory(p){
+  const empty = els.historyList.querySelector('.history-empty');
+  if (empty) empty.remove();
+  els.historyList.insertAdjacentHTML('afterbegin', historyItemHtml(p));
+}
+async function loadHistory(){
+  els.historyList.innerHTML = '<div class="history-empty">Memuat riwayat…</div>';
+  Object.values(savedLayers).forEach(l => map.removeLayer(l));
+  for (const k in savedLayers) delete savedLayers[k];
+
+  try {
+    const keys = await dbList('perumahan:');
+    if (!keys || keys.length === 0) {
+      els.historyList.innerHTML = '<div class="history-empty">Belum ada komplek yang didigitasi.</div>';
+      return;
+    }
+    const items = [];
+    for (const key of keys) {
+      try {
+        const value = await dbGet(key);
+        if (value) items.push(JSON.parse(value));
+      } catch (e) { /* lewati entri yang gagal dibaca */ }
+    }
+    items.sort((a, b) => new Date(b.waktu_kirim) - new Date(a.waktu_kirim));
+    els.historyList.innerHTML = items.length
+      ? items.map(historyItemHtml).join('')
+      : '<div class="history-empty">Belum ada komplek yang didigitasi.</div>';
+
+    items.forEach(p => {
+      const layer = L.geoJSON({ type: 'Feature', properties: p, geometry: p.geometry }, {
+        style: { color: '#1e2417', fillColor: '#1e2417', fillOpacity: 0.28, weight: 2 }
+      }).addTo(map);
+      layer.bindPopup(popupHtml(p));
+      savedLayers[p.id] = layer;
+    });
+  } catch (err) {
+    els.historyList.innerHTML = '<div class="history-empty">Gagal memuat riwayat.</div>';
+  }
+}
+window.zoomToFeature = function(id){
+  const layer = savedLayers[id];
+  if (layer) map.fitBounds(layer.getBounds ? layer.getBounds() : layer.getLatLngs(), { maxZoom: 19 });
+};
+window.deleteFeature = async function(id){
+  const msg = storageMode === 'shared'
+    ? 'Hapus data komplek ini dari basis data bersama? Tindakan ini memengaruhi semua pengguna.'
+    : 'Hapus data komplek ini dari penyimpanan perangkat ini?';
+  if (!confirm(msg)) return;
+  try {
+    await dbDelete('perumahan:' + id);
+    loadHistory();
+  } catch (err) {
+    alert('Gagal menghapus data.');
+  }
+};
+document.getElementById('btn-refresh-history').addEventListener('click', loadHistory);
+loadHistory();
+
+/* =================== GPS: readout posisi & tombol lokasi saya =================== */
+let userMarker = null;
+function updateGpsReadout(pos){
+  const { latitude, longitude, accuracy } = pos.coords;
+  els.gpsReadout.innerHTML = `Lat: ${latitude.toFixed(6)}<br>Lon: ${longitude.toFixed(6)}<br>Akurasi: &plusmn;${Math.round(accuracy)} m`;
+  if (!userMarker) {
+    userMarker = L.circleMarker([latitude, longitude], { radius: 6, color: '#b3392a', fillColor: '#b3392a', fillOpacity: 1, weight: 2 }).addTo(map);
+  } else {
+    userMarker.setLatLng([latitude, longitude]);
+  }
+}
+if (navigator.geolocation) {
+  navigator.geolocation.watchPosition(updateGpsReadout, () => {
+    els.gpsReadout.textContent = 'Sinyal GPS tidak tersedia.';
+  }, { enableHighAccuracy: true, maximumAge: 5000 });
+}
+document.getElementById('btn-locate').addEventListener('click', () => {
+  if (!navigator.geolocation) return;
+  navigator.geolocation.getCurrentPosition(pos => {
+    map.setView([pos.coords.latitude, pos.coords.longitude], 19);
+  }, () => alert('Tidak bisa mengambil lokasi saat ini.'), { enableHighAccuracy: true });
+});
+</script>
+</body>
+</html>
